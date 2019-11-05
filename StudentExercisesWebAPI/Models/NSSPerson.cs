@@ -14,6 +14,7 @@ namespace StudentExercisesWebAPI.Models
         [Required]
         public string LastName { get; set; }
 
+        [StringLength(50, MinimumLength = 3)]
         [Required]
         public string SlackHandle { get; set; }
 
