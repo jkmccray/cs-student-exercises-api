@@ -41,7 +41,7 @@ namespace StudentExercisesWebAPI.Controllers
 	                           s.FirstName AS StudentFirstName, 
 	                           s.LastName AS StudentLastName, 
                                s.SlackHandle AS StudentSlack, 
-                               s.CohortId, 
+							   c.Id AS CohortId,
 	                           c.Name AS CohortName,
                                i.FirstName AS InstructorFirstName, 
 	                           i.LastName AS InstructorLastName,
@@ -69,31 +69,37 @@ namespace StudentExercisesWebAPI.Controllers
                             cohorts.Add(newCohort);
                         }
 
-                        int studentId = reader.GetInt32(reader.GetOrdinal("StudentId"));
-                        if (!cohorts[cohortId - 1].StudentList.Any(s => s.Id == studentId))
+                        if (!reader.IsDBNull(reader.GetOrdinal("StudentId")))
                         {
-                            Student newStudent = new Student()
+                            int studentId = reader.GetInt32(reader.GetOrdinal("StudentId"));
+                            if (!cohorts[cohortId - 1].StudentList.Any(s => s.Id == studentId))
                             {
-                                Id = studentId,
-                                FirstName = reader.GetString(reader.GetOrdinal("StudentFirstName")),
-                                LastName = reader.GetString(reader.GetOrdinal("StudentLastName")),
-                                SlackHandle = reader.GetString(reader.GetOrdinal("StudentSlack"))
+                                Student newStudent = new Student()
+                                {
+                                    Id = studentId,
+                                    FirstName = reader.GetString(reader.GetOrdinal("StudentFirstName")),
+                                    LastName = reader.GetString(reader.GetOrdinal("StudentLastName")),
+                                    SlackHandle = reader.GetString(reader.GetOrdinal("StudentSlack"))
+                                };
+                                cohorts[cohortId - 1].StudentList.Add(newStudent);
                             };
-                            cohorts[cohortId - 1].StudentList.Add(newStudent);
-                        };
+                        }
 
-                        int instructorId = reader.GetInt32(reader.GetOrdinal("InstructorId"));
-                        if (!cohorts[cohortId - 1].InstructorList.Any(i => i.Id == instructorId))
+                        if (!reader.IsDBNull(reader.GetOrdinal("InstructorId")))
                         {
-                            Instructor newInstructor = new Instructor()
+                            int instructorId = reader.GetInt32(reader.GetOrdinal("InstructorId"));
+                            if (!cohorts[cohortId - 1].InstructorList.Any(i => i.Id == instructorId))
                             {
-                                Id = instructorId,
-                                FirstName = reader.GetString(reader.GetOrdinal("InstructorFirstName")),
-                                LastName = reader.GetString(reader.GetOrdinal("InstructorLastName")),
-                                SlackHandle = reader.GetString(reader.GetOrdinal("InstructorSlack"))
+                                Instructor newInstructor = new Instructor()
+                                {
+                                    Id = instructorId,
+                                    FirstName = reader.GetString(reader.GetOrdinal("InstructorFirstName")),
+                                    LastName = reader.GetString(reader.GetOrdinal("InstructorLastName")),
+                                    SlackHandle = reader.GetString(reader.GetOrdinal("InstructorSlack"))
+                                };
+                                cohorts[cohortId - 1].InstructorList.Add(newInstructor);
                             };
-                            cohorts[cohortId - 1].InstructorList.Add(newInstructor);
-                        };
+                        }
                     }
 
                     reader.Close();
@@ -117,7 +123,7 @@ namespace StudentExercisesWebAPI.Controllers
 	                           s.FirstName AS StudentFirstName, 
 	                           s.LastName AS StudentLastName, 
                                s.SlackHandle AS StudentSlack, 
-                               s.CohortId, 
+                               c.Id AS CohortId, 
 	                           c.Name AS CohortName,
                                i.FirstName AS InstructorFirstName, 
 	                           i.LastName AS InstructorLastName,
@@ -142,33 +148,40 @@ namespace StudentExercisesWebAPI.Controllers
                             };
                         }
 
-                        int studentId = reader.GetInt32(reader.GetOrdinal("StudentId"));
-                        if (!aCohort.StudentList.Any(s => s.Id == studentId))
+                        if (!reader.IsDBNull(reader.GetOrdinal("StudentId")))
                         {
-                            Student newStudent = new Student()
+                            int studentId = reader.GetInt32(reader.GetOrdinal("StudentId"));
+                            if (!aCohort.StudentList.Any(s => s.Id == studentId))
                             {
-                                Id = studentId,
-                                FirstName = reader.GetString(reader.GetOrdinal("StudentFirstName")),
-                                LastName = reader.GetString(reader.GetOrdinal("StudentLastName")),
-                                SlackHandle = reader.GetString(reader.GetOrdinal("StudentSlack"))
+                                Student newStudent = new Student()
+                                {
+                                    Id = studentId,
+                                    FirstName = reader.GetString(reader.GetOrdinal("StudentFirstName")),
+                                    LastName = reader.GetString(reader.GetOrdinal("StudentLastName")),
+                                    SlackHandle = reader.GetString(reader.GetOrdinal("StudentSlack"))
+                                };
+                                aCohort.StudentList.Add(newStudent);
                             };
-                            aCohort.StudentList.Add(newStudent);
-                        };
 
-                        int instructorId = reader.GetInt32(reader.GetOrdinal("InstructorId"));
-                        if (!aCohort.InstructorList.Any(i => i.Id == instructorId))
+                        }
+
+                        if (!reader.IsDBNull(reader.GetOrdinal("InstructorId")))
                         {
-                            Instructor newInstructor = new Instructor()
+                            int instructorId = reader.GetInt32(reader.GetOrdinal("InstructorId"));
+                            if (!aCohort.InstructorList.Any(i => i.Id == instructorId))
                             {
-                                Id = instructorId,
-                                FirstName = reader.GetString(reader.GetOrdinal("InstructorFirstName")),
-                                LastName = reader.GetString(reader.GetOrdinal("InstructorLastName")),
-                                SlackHandle = reader.GetString(reader.GetOrdinal("InstructorSlack"))
+                                Instructor newInstructor = new Instructor()
+                                {
+                                    Id = instructorId,
+                                    FirstName = reader.GetString(reader.GetOrdinal("InstructorFirstName")),
+                                    LastName = reader.GetString(reader.GetOrdinal("InstructorLastName")),
+                                    SlackHandle = reader.GetString(reader.GetOrdinal("InstructorSlack"))
+                                };
+                                aCohort.InstructorList.Add(newInstructor);
                             };
-                            aCohort.InstructorList.Add(newInstructor);
-                        };
-
+                        }
                     }
+
                     if (aCohort == null)
                     {
                         return NotFound();

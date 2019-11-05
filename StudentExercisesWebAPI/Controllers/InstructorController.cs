@@ -12,7 +12,7 @@ namespace StudentExercisesWebAPI.Controllers
 {
     [Route("api/[controller]")]
     [ApiController]
-    public class InstructorController : Controller
+    public class InstructorController : ControllerBase
     {
         private IConfiguration _config;
 
@@ -74,7 +74,7 @@ namespace StudentExercisesWebAPI.Controllers
         }
 
         // Get single instructor based on id
-        [HttpGet("{id}")]
+        [HttpGet("{id}", Name = "GetInstructor")]
         public async Task<IActionResult> GetOneInstructor(int id)
         {
             using (SqlConnection conn = Connection)
@@ -120,54 +120,62 @@ namespace StudentExercisesWebAPI.Controllers
 
         // POST: Instructor/Create
         [HttpPost]
-        public void Post([FromBody] Instructor newInstructor)
+        public async Task<IActionResult> Post([FromBody] Instructor newInstructor)
         {
             using (SqlConnection conn = Connection)
             {
                 conn.Open();
                 using (SqlCommand cmd = conn.CreateCommand())
                 {
-                    cmd.CommandText = @"INSERT INTO Students (firstName, lastName, slackHandle, cohortId, cohort, specialty) 
-                                            VALUES (@firstName, @lastName, @slackHandle, @cohortId, @cohort, @specialty)";
+                    cmd.CommandText = @"INSERT INTO Instructors (FirstName, LastName, SlackHandle, CohortId, Specialty) 
+                                            OUTPUT INSERTED.Id
+                                            VALUES (@firstName, @lastName, @slackHandle, @cohortId, @specialty)";
                     cmd.Parameters.Add(new SqlParameter("@firstName", newInstructor.FirstName));
                     cmd.Parameters.Add(new SqlParameter("@lastName", newInstructor.LastName));
                     cmd.Parameters.Add(new SqlParameter("@slackHandle", newInstructor.SlackHandle));
+                    cmd.Parameters.Add(new SqlParameter("@specialty", newInstructor.Specialty));
                     cmd.Parameters.Add(new SqlParameter("@cohortId", newInstructor.CohortId));
-                    cmd.Parameters.Add(new SqlParameter("@cohort", newInstructor.Cohort));
-                    cmd.Parameters.Add(new SqlParameter("@exercises", newInstructor.Specialty));
 
-                    cmd.ExecuteNonQuery();
+                    int newId = (int)cmd.ExecuteScalar();
+                    newInstructor.Id = newId;
+                    return CreatedAtRoute("GetInstructor", new { id = newId }, newInstructor);
                 }
             }
         }
 
+        [HttpPut("{id}")]
         // EDIT: Instructor/
-        [HttpPost]
-        public void Update([FromBody] Instructor newInstructor)
+        public async Task<IActionResult> Update([FromRoute] int id, [FromBody] Instructor modifiedInstructor)
         {
             using (SqlConnection conn = Connection)
             {
                 conn.Open();
                 using (SqlCommand cmd = conn.CreateCommand())
                 {
-                    cmd.CommandText = @"UPDATE Students
-                                        SET firstName = @firstName, lastName = @lastName, slackHandle = @slackHandle,
-                                            cohortId = @cohortId, cohort = @cohort, specialty = @specialty)";
-                    cmd.Parameters.Add(new SqlParameter("@firstName", newInstructor.FirstName));
-                    cmd.Parameters.Add(new SqlParameter("@lastName", newInstructor.LastName));
-                    cmd.Parameters.Add(new SqlParameter("@slackHandle", newInstructor.SlackHandle));
-                    cmd.Parameters.Add(new SqlParameter("@cohortId", newInstructor.CohortId));
-                    cmd.Parameters.Add(new SqlParameter("@cohort", newInstructor.Cohort));
-                    cmd.Parameters.Add(new SqlParameter("@exercises", newInstructor.Specialty));
+                    cmd.CommandText = @"UPDATE Instructors
+                                        SET FirstName = @firstName, LastName = @lastName, SlackHandle = @slackHandle,
+                                            CohortId = @cohortId, Specialty = @specialty
+                                        WHERE Id = @id";
+                    cmd.Parameters.Add(new SqlParameter("@firstName", modifiedInstructor.FirstName));
+                    cmd.Parameters.Add(new SqlParameter("@lastName", modifiedInstructor.LastName));
+                    cmd.Parameters.Add(new SqlParameter("@slackHandle", modifiedInstructor.SlackHandle));
+                    cmd.Parameters.Add(new SqlParameter("@cohortId", modifiedInstructor.CohortId));
+                    cmd.Parameters.Add(new SqlParameter("@specialty", modifiedInstructor.Specialty));
+                    cmd.Parameters.Add(new SqlParameter("@id", id));
 
-                    cmd.ExecuteNonQuery();
+                    int rowsAffected = cmd.ExecuteNonQuery();
+                    if (rowsAffected > 0)
+                    {
+                        return new StatusCodeResult(StatusCodes.Status204NoContent);
+                    }
+                    throw new Exception("No rows affected");
                 }
             }
         }
 
-
+        [HttpDelete("{id}")]
         // DELETE: Instructor/Delete/5
-        public void Delete([FromBody] int id)
+        public async Task<IActionResult> Delete([FromRoute] int id)
         {
             using (SqlConnection conn = Connection)
             {
@@ -178,7 +186,12 @@ namespace StudentExercisesWebAPI.Controllers
                                         WHERE id = @id";
                     cmd.Parameters.Add(new SqlParameter("@id", id));
 
-                    cmd.ExecuteNonQuery();
+                    int rowsAffected = cmd.ExecuteNonQuery();
+                    if (rowsAffected > 0)
+                    {
+                        return new StatusCodeResult(StatusCodes.Status204NoContent);
+                    }
+                    throw new Exception("No rows affected");
                 }
             }
         }
