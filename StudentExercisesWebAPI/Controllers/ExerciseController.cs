@@ -25,7 +25,7 @@ namespace StudentExercisesWebAPI.Controllers
 
         // GET: Exercise
         [HttpGet]
-        public IEnumerable<Exercise> GetAllExercises(string include)
+        public IEnumerable<Exercise> GetAllExercises(string include, string q)
         {
             using (SqlConnection conn = new SqlConnection(_connectionString))
             {
@@ -70,18 +70,38 @@ namespace StudentExercisesWebAPI.Controllers
                         reader.Close();
                         return exercises.Values;
                     }
-                    else
+                    else if (q != null)
                     {
-                        cmd.CommandText = "SELECT id, name, language FROM Exercises";
+                        cmd.CommandText = @"SELECT Id, Name, Language FROM Exercises
+                                            WHERE Name LIKE @searchString OR Language LIKE @searchString";
+                        cmd.Parameters.Add(new SqlParameter("@searchString", "%" + q + "%"));
                         SqlDataReader reader = cmd.ExecuteReader();
                         List<Exercise> exercises = new List<Exercise>();
                         while (reader.Read())
                         {
                             Exercise newExercise = new Exercise()
                             {
-                                Id = reader.GetInt32(reader.GetOrdinal("id")),
-                                Name = reader.GetString(reader.GetOrdinal("name")),
-                                Language = reader.GetString(reader.GetOrdinal("language"))
+                                Id = reader.GetInt32(reader.GetOrdinal("Id")),
+                                Name = reader.GetString(reader.GetOrdinal("Name")),
+                                Language = reader.GetString(reader.GetOrdinal("Language"))
+                            };
+                            exercises.Add(newExercise);
+                        }
+                        reader.Close();
+                        return exercises;
+                    }
+                    else
+                    {
+                        cmd.CommandText = "SELECT Id, Name, Language FROM Exercises";
+                        SqlDataReader reader = cmd.ExecuteReader();
+                        List<Exercise> exercises = new List<Exercise>();
+                        while (reader.Read())
+                        {
+                            Exercise newExercise = new Exercise()
+                            {
+                                Id = reader.GetInt32(reader.GetOrdinal("Id")),
+                                Name = reader.GetString(reader.GetOrdinal("Name")),
+                                Language = reader.GetString(reader.GetOrdinal("Language"))
                             };
                             exercises.Add(newExercise);
                         }

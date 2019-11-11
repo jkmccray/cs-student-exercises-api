@@ -30,45 +30,81 @@ namespace StudentExercisesWebAPI.Controllers
         }
 
         [HttpGet]
-        public async Task<IActionResult> Get()
+        public async Task<IActionResult> Get(string q)
         {
             using (SqlConnection conn = Connection)
             {
                 conn.Open();
                 using (SqlCommand cmd = conn.CreateCommand())
                 {
-                    cmd.CommandText = @"
-                            SELECT i.Id, i.FirstName, i.LastName, i.SlackHandle, i.Specialty,
-                                   i.CohortId, c.Name AS CohortName
-                              FROM Instructors i INNER JOIN Cohorts c ON i.CohortId = c.id";
-
-                    SqlDataReader reader = cmd.ExecuteReader();
-
-                    List<Instructor> instructors = new List<Instructor>();
-
-                    while (reader.Read())
+                    if (q != null)
                     {
-                        Instructor newInstructor= new Instructor()
+                        cmd.CommandText = @"SELECT i.Id, i.FirstName, i.LastName, i.SlackHandle, i.Specialty,
+                                            i.CohortId, c.Name AS CohortName
+                                            FROM Instructors i INNER JOIN Cohorts c ON i.CohortId = c.id
+                                            WHERE i.FirstName LIKE @searchString 
+                                            OR i.LastName LIKE @searchString
+                                            OR i.SlackHandle LIKE @searchString";
+                        cmd.Parameters.Add(new SqlParameter("@searchString", "%" + q + "%"));
+                        SqlDataReader reader = cmd.ExecuteReader();
+
+                        List<Instructor> instructors = new List<Instructor>();
+
+                        while (reader.Read())
                         {
-                            Id = reader.GetInt32(reader.GetOrdinal("Id")),
-                            FirstName = reader.GetString(reader.GetOrdinal("FirstName")),
-                            LastName = reader.GetString(reader.GetOrdinal("LastName")),
-                            SlackHandle = reader.GetString(reader.GetOrdinal("SlackHandle")),
-                            Specialty = reader.GetString(reader.GetOrdinal("Specialty")),
-                            CohortId = reader.GetInt32(reader.GetOrdinal("CohortId")),
-                            Cohort = new Cohort()
+                            Instructor newInstructor = new Instructor()
                             {
-                                Id = reader.GetInt32(reader.GetOrdinal("CohortId")),
-                                Name = reader.GetString(reader.GetOrdinal("CohortName")),
-                            }
-                        };
+                                Id = reader.GetInt32(reader.GetOrdinal("Id")),
+                                FirstName = reader.GetString(reader.GetOrdinal("FirstName")),
+                                LastName = reader.GetString(reader.GetOrdinal("LastName")),
+                                SlackHandle = reader.GetString(reader.GetOrdinal("SlackHandle")),
+                                Specialty = reader.GetString(reader.GetOrdinal("Specialty")),
+                                CohortId = reader.GetInt32(reader.GetOrdinal("CohortId")),
+                                Cohort = new Cohort()
+                                {
+                                    Id = reader.GetInt32(reader.GetOrdinal("CohortId")),
+                                    Name = reader.GetString(reader.GetOrdinal("CohortName")),
+                                }
+                            };
 
-                        instructors.Add(newInstructor);
+                            instructors.Add(newInstructor);
+                        }
+                        reader.Close();
+                        return Ok(instructors);
                     }
+                    else
+                    {
+                        cmd.CommandText = @"
+                                SELECT i.Id, i.FirstName, i.LastName, i.SlackHandle, i.Specialty,
+                                       i.CohortId, c.Name AS CohortName
+                                  FROM Instructors i INNER JOIN Cohorts c ON i.CohortId = c.id";
 
-                    reader.Close();
-                    return Ok(instructors);
+                        SqlDataReader reader = cmd.ExecuteReader();
 
+                        List<Instructor> instructors = new List<Instructor>();
+
+                        while (reader.Read())
+                        {
+                            Instructor newInstructor= new Instructor()
+                            {
+                                Id = reader.GetInt32(reader.GetOrdinal("Id")),
+                                FirstName = reader.GetString(reader.GetOrdinal("FirstName")),
+                                LastName = reader.GetString(reader.GetOrdinal("LastName")),
+                                SlackHandle = reader.GetString(reader.GetOrdinal("SlackHandle")),
+                                Specialty = reader.GetString(reader.GetOrdinal("Specialty")),
+                                CohortId = reader.GetInt32(reader.GetOrdinal("CohortId")),
+                                Cohort = new Cohort()
+                                {
+                                    Id = reader.GetInt32(reader.GetOrdinal("CohortId")),
+                                    Name = reader.GetString(reader.GetOrdinal("CohortName")),
+                                }
+                            };
+
+                            instructors.Add(newInstructor);
+                        }
+                        reader.Close();
+                        return Ok(instructors);
+                    }
                 }
             }
         }

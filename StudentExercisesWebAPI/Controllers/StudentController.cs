@@ -31,7 +31,7 @@ namespace StudentExercisesWebAPI.Controllers
 
         // Get all students
         [HttpGet]
-        public async Task<IActionResult> Get(string include)
+        public async Task<IActionResult> Get(string include, string q)
         {
             using (SqlConnection conn = Connection)
             {
@@ -90,6 +90,41 @@ namespace StudentExercisesWebAPI.Controllers
                         reader.Close();
 
                         return Ok(students.Values);
+                    }
+                    else if (q != null)
+                    {
+                        cmd.CommandText = @"SELECT s.Id, s.FirstName, s.LastName, s.SlackHandle, 
+                                            s.CohortId, c.Name AS CohortName
+                                            FROM Students s INNER JOIN Cohorts c ON s.CohortId = c.id
+                                            WHERE s.FirstName LIKE @searchString 
+                                            OR s.LastName LIKE @searchString
+                                            OR s.SlackHandle LIKE @searchString";
+                        cmd.Parameters.Add(new SqlParameter("@searchString", "%" + q + "%"));
+                        SqlDataReader reader = cmd.ExecuteReader();
+                        List<Student> students = new List<Student>();
+
+                        while (reader.Read())
+                        {
+                            int studentId = reader.GetInt32(reader.GetOrdinal("Id"));
+                            Student newStudent = new Student()
+                            {
+                                Id = reader.GetInt32(reader.GetOrdinal("Id")),
+                                FirstName = reader.GetString(reader.GetOrdinal("FirstName")),
+                                LastName = reader.GetString(reader.GetOrdinal("LastName")),
+                                SlackHandle = reader.GetString(reader.GetOrdinal("SlackHandle")),
+                                CohortId = reader.GetInt32(reader.GetOrdinal("CohortId")),
+                                Cohort = new Cohort()
+                                {
+                                    Id = reader.GetInt32(reader.GetOrdinal("CohortId")),
+                                    Name = reader.GetString(reader.GetOrdinal("CohortName")),
+                                }
+                            };
+
+                            students.Add(newStudent);
+                        }
+                        reader.Close();
+
+                        return Ok(students);
                     }
                     else
                     {

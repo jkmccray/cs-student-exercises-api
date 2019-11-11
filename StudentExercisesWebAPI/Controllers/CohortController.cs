@@ -30,14 +30,16 @@ namespace StudentExercisesWebAPI.Controllers
         }
 
         [HttpGet]
-        public async Task<IActionResult> Get()
+        public async Task<IActionResult> Get(string q)
         {
             using (SqlConnection conn = Connection)
             {
                 conn.Open();
                 using (SqlCommand cmd = conn.CreateCommand())
                 {
-                    cmd.CommandText = @"
+                    if (q != null)
+                    {
+                        cmd.CommandText = @"
                             SELECT s.Id AS StudentId, 
 	                           s.FirstName AS StudentFirstName, 
 	                           s.LastName AS StudentLastName, 
@@ -49,63 +51,139 @@ namespace StudentExercisesWebAPI.Controllers
                         	   i.SlackHandle AS InstructorSlack,
 	                           i.Id AS InstructorId
                                     FROM Cohorts c LEFT JOIN Students s ON s.CohortId = c.id
-                                    LEFT JOIN Instructors i ON i.CohortId = c.id";
+                                    LEFT JOIN Instructors i ON i.CohortId = c.id
+                                    WHERE c.Name LIKE @searchString ";
+                        cmd.Parameters.Add(new SqlParameter("@searchString", "%" + q + "%"));
+                        SqlDataReader reader = cmd.ExecuteReader();
 
-                    SqlDataReader reader = cmd.ExecuteReader();
+                        List<Cohort> cohorts = new List<Cohort>();
 
-                    List<Cohort> cohorts = new List<Cohort>();
+                        while (reader.Read())
+                        {
+                            Cohort newCohort = null;
+                            int cohortId = reader.GetInt32(reader.GetOrdinal("CohortId"));
+                            if (!cohorts.Any(c => c.Id == cohortId))
+                            {
+                                newCohort = new Cohort()
+                                {
+                                    Id = cohortId,
+                                    Name = reader.GetString(reader.GetOrdinal("CohortName"))
+                                };
 
-                    while (reader.Read())
+                                cohorts.Add(newCohort);
+                            }
+
+                            Cohort existingCohort = cohorts.Find(c => c.Id == cohortId);
+                            if (!reader.IsDBNull(reader.GetOrdinal("StudentId")))
+                            {
+                                int studentId = reader.GetInt32(reader.GetOrdinal("StudentId"));
+                                if (!existingCohort.StudentList.Any(s => s.Id == studentId))
+                                {
+                                    Student newStudent = new Student()
+                                    {
+                                        Id = studentId,
+                                        FirstName = reader.GetString(reader.GetOrdinal("StudentFirstName")),
+                                        LastName = reader.GetString(reader.GetOrdinal("StudentLastName")),
+                                        SlackHandle = reader.GetString(reader.GetOrdinal("StudentSlack"))
+                                    };
+                                    existingCohort.StudentList.Add(newStudent);
+                                };
+                            }
+
+                            if (!reader.IsDBNull(reader.GetOrdinal("InstructorId")))
+                            {
+                                int instructorId = reader.GetInt32(reader.GetOrdinal("InstructorId"));
+                                if (!existingCohort.InstructorList.Any(i => i.Id == instructorId))
+                                {
+                                    Instructor newInstructor = new Instructor()
+                                    {
+                                        Id = instructorId,
+                                        FirstName = reader.GetString(reader.GetOrdinal("InstructorFirstName")),
+                                        LastName = reader.GetString(reader.GetOrdinal("InstructorLastName")),
+                                        SlackHandle = reader.GetString(reader.GetOrdinal("InstructorSlack"))
+                                    };
+                                    existingCohort.InstructorList.Add(newInstructor);
+                                };
+                            }
+                        }
+                        reader.Close();
+
+                        return Ok(cohorts);
+                    }
+                    else
                     {
-                        Cohort newCohort = null;
-                        int cohortId = reader.GetInt32(reader.GetOrdinal("CohortId"));
-                        if (!cohorts.Any(c => c.Id == cohortId))
-                        {
-                            newCohort = new Cohort()
-                            {
-                                Id = cohortId,
-                                Name = reader.GetString(reader.GetOrdinal("CohortName"))
-                            };
+                        cmd.CommandText = @"
+                                SELECT s.Id AS StudentId, 
+	                               s.FirstName AS StudentFirstName, 
+	                               s.LastName AS StudentLastName, 
+                                   s.SlackHandle AS StudentSlack, 
+							       c.Id AS CohortId,
+	                               c.Name AS CohortName,
+                                   i.FirstName AS InstructorFirstName, 
+	                               i.LastName AS InstructorLastName,
+                        	       i.SlackHandle AS InstructorSlack,
+	                               i.Id AS InstructorId
+                                        FROM Cohorts c LEFT JOIN Students s ON s.CohortId = c.id
+                                        LEFT JOIN Instructors i ON i.CohortId = c.id";
 
-                            cohorts.Add(newCohort);
-                        }
+                        SqlDataReader reader = cmd.ExecuteReader();
 
-                        if (!reader.IsDBNull(reader.GetOrdinal("StudentId")))
+                        List<Cohort> cohorts = new List<Cohort>();
+
+                        while (reader.Read())
                         {
-                            int studentId = reader.GetInt32(reader.GetOrdinal("StudentId"));
-                            if (!cohorts[cohortId - 1].StudentList.Any(s => s.Id == studentId))
+                            Cohort newCohort = null;
+                            int cohortId = reader.GetInt32(reader.GetOrdinal("CohortId"));
+                            if (!cohorts.Any(c => c.Id == cohortId))
                             {
-                                Student newStudent = new Student()
+                                newCohort = new Cohort()
                                 {
-                                    Id = studentId,
-                                    FirstName = reader.GetString(reader.GetOrdinal("StudentFirstName")),
-                                    LastName = reader.GetString(reader.GetOrdinal("StudentLastName")),
-                                    SlackHandle = reader.GetString(reader.GetOrdinal("StudentSlack"))
+                                    Id = cohortId,
+                                    Name = reader.GetString(reader.GetOrdinal("CohortName"))
                                 };
-                                cohorts[cohortId - 1].StudentList.Add(newStudent);
-                            };
-                        }
 
-                        if (!reader.IsDBNull(reader.GetOrdinal("InstructorId")))
-                        {
-                            int instructorId = reader.GetInt32(reader.GetOrdinal("InstructorId"));
-                            if (!cohorts[cohortId - 1].InstructorList.Any(i => i.Id == instructorId))
+                                cohorts.Add(newCohort);
+                            }
+
+                            Cohort existingCohort = cohorts.Find(c => c.Id == cohortId);
+                            if (!reader.IsDBNull(reader.GetOrdinal("StudentId")))
                             {
-                                Instructor newInstructor = new Instructor()
+                                int studentId = reader.GetInt32(reader.GetOrdinal("StudentId"));
+                                if (!existingCohort.StudentList.Any(s => s.Id == studentId))
                                 {
-                                    Id = instructorId,
-                                    FirstName = reader.GetString(reader.GetOrdinal("InstructorFirstName")),
-                                    LastName = reader.GetString(reader.GetOrdinal("InstructorLastName")),
-                                    SlackHandle = reader.GetString(reader.GetOrdinal("InstructorSlack"))
+                                    Student newStudent = new Student()
+                                    {
+                                        Id = studentId,
+                                        FirstName = reader.GetString(reader.GetOrdinal("StudentFirstName")),
+                                        LastName = reader.GetString(reader.GetOrdinal("StudentLastName")),
+                                        SlackHandle = reader.GetString(reader.GetOrdinal("StudentSlack"))
+                                    };
+                                    existingCohort.StudentList.Add(newStudent);
                                 };
-                                cohorts[cohortId - 1].InstructorList.Add(newInstructor);
-                            };
+                            }
+
+                            if (!reader.IsDBNull(reader.GetOrdinal("InstructorId")))
+                            {
+                                int instructorId = reader.GetInt32(reader.GetOrdinal("InstructorId"));
+                                if (!existingCohort.InstructorList.Any(i => i.Id == instructorId))
+                                {
+                                    Instructor newInstructor = new Instructor()
+                                    {
+                                        Id = instructorId,
+                                        FirstName = reader.GetString(reader.GetOrdinal("InstructorFirstName")),
+                                        LastName = reader.GetString(reader.GetOrdinal("InstructorLastName")),
+                                        SlackHandle = reader.GetString(reader.GetOrdinal("InstructorSlack"))
+                                    };
+                                    existingCohort.InstructorList.Add(newInstructor);
+                                };
+                            }
                         }
+                        reader.Close();
+
+                        return Ok(cohorts);
+
                     }
 
-                    reader.Close();
-
-                    return Ok(cohorts);
                 }
             }
         }
