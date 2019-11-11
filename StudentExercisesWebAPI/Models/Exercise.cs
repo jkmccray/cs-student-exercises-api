@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
 
 namespace StudentExercisesWebAPI.Models
@@ -9,5 +10,6 @@ namespace StudentExercisesWebAPI.Models
         public string Name { get; set; }
         [Required]
         public string Language { get; set; }
+        public List<Student> AssignedStudents { get; set; } = new List<Student>();
     }
 }

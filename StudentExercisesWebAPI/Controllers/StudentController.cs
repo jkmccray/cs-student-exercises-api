@@ -31,30 +31,80 @@ namespace StudentExercisesWebAPI.Controllers
 
         // Get all students
         [HttpGet]
-        public async Task<IActionResult> Get()
+        public async Task<IActionResult> Get(string include)
         {
             using (SqlConnection conn = Connection)
             {
                 conn.Open();
                 using (SqlCommand cmd = conn.CreateCommand())
                 {
-                    cmd.CommandText = @"
-                            SELECT s.Id, s.FirstName, s.LastName, s.SlackHandle, 
-                                   s.CohortId, c.Name AS CohortName,
-                                   se.ExerciseId, e.Name AS ExerciseName, e.Language
-                              FROM Students s INNER JOIN Cohorts c ON s.CohortId = c.id
-                                   LEFT JOIN StudentExercises se on se.StudentId = s.id
-                                   LEFT JOIN Exercises e on se.ExerciseId = e.Id";
-
-                    SqlDataReader reader = cmd.ExecuteReader();
-
-                    Dictionary<int, Student> students = new Dictionary<int, Student>();
-
-                    while (reader.Read())
+                    if (include == "exercise")
                     {
-                        int studentId = reader.GetInt32(reader.GetOrdinal("Id"));
-                        if (!students.ContainsKey(studentId))
+                        cmd.CommandText = @"
+                                SELECT s.Id, s.FirstName, s.LastName, s.SlackHandle, 
+                                       s.CohortId, c.Name AS CohortName,
+                                       se.ExerciseId, e.Name AS ExerciseName, e.Language
+                                  FROM Students s INNER JOIN Cohorts c ON s.CohortId = c.id
+                                       LEFT JOIN StudentExercises se on se.StudentId = s.id
+                                       LEFT JOIN Exercises e on se.ExerciseId = e.Id";
+
+                        SqlDataReader reader = cmd.ExecuteReader();
+
+                        Dictionary<int, Student> students = new Dictionary<int, Student>();
+
+                        while (reader.Read())
                         {
+                            int studentId = reader.GetInt32(reader.GetOrdinal("Id"));
+                            if (!students.ContainsKey(studentId))
+                            {
+                                Student newStudent = new Student()
+                                {
+                                    Id = reader.GetInt32(reader.GetOrdinal("Id")),
+                                    FirstName = reader.GetString(reader.GetOrdinal("FirstName")),
+                                    LastName = reader.GetString(reader.GetOrdinal("LastName")),
+                                    SlackHandle = reader.GetString(reader.GetOrdinal("SlackHandle")),
+                                    CohortId = reader.GetInt32(reader.GetOrdinal("CohortId")),
+                                    Cohort = new Cohort()
+                                    {
+                                        Id = reader.GetInt32(reader.GetOrdinal("CohortId")),
+                                        Name = reader.GetString(reader.GetOrdinal("CohortName")),
+                                    }
+                                };
+
+                                students.Add(studentId, newStudent);
+                            }
+
+                            Student fromDictionary = students[studentId];
+
+                            if (!reader.IsDBNull(reader.GetOrdinal("ExerciseId")))
+                            {
+                                Exercise anExercise = new Exercise()
+                                {
+                                    Id = reader.GetInt32(reader.GetOrdinal("ExerciseId")),
+                                    Name = reader.GetString(reader.GetOrdinal("ExerciseName")),
+                                    Language = reader.GetString(reader.GetOrdinal("Language"))
+                                };
+                                fromDictionary.Exercises.Add(anExercise);
+                            }
+                        }
+                        reader.Close();
+
+                        return Ok(students.Values);
+                    }
+                    else
+                    {
+                        cmd.CommandText = @"
+                                SELECT s.Id, s.FirstName, s.LastName, s.SlackHandle, 
+                                       s.CohortId, c.Name AS CohortName
+                                  FROM Students s INNER JOIN Cohorts c ON s.CohortId = c.id";
+
+                        SqlDataReader reader = cmd.ExecuteReader();
+
+                        List<Student> students = new List<Student>();
+
+                        while (reader.Read())
+                        {
+                            int studentId = reader.GetInt32(reader.GetOrdinal("Id"));
                             Student newStudent = new Student()
                             {
                                 Id = reader.GetInt32(reader.GetOrdinal("Id")),
@@ -69,26 +119,12 @@ namespace StudentExercisesWebAPI.Controllers
                                 }
                             };
 
-                            students.Add(studentId, newStudent);
+                            students.Add(newStudent);
                         }
+                        reader.Close();
 
-                        Student fromDictionary = students[studentId];
-
-                        if (!reader.IsDBNull(reader.GetOrdinal("ExerciseId")))
-                        {
-                            Exercise anExercise = new Exercise()
-                            {
-                                Id = reader.GetInt32(reader.GetOrdinal("ExerciseId")),
-                                Name = reader.GetString(reader.GetOrdinal("ExerciseName")),
-                                Language = reader.GetString(reader.GetOrdinal("Language"))
-                            };
-                            fromDictionary.Exercises.Add(anExercise);
-                        }
+                        return Ok(students);
                     }
-
-                    reader.Close();
-
-                    return Ok(students.Values);
                 }
             }
         }
